@@ -12,9 +12,9 @@ Search by tag to retrieve trending Imgur media
 
 All uploaded media and albums are anonymous. You can save the deletehash into .ini file to be able to delete them later if needed. 
 
-The extension contains a premade deck, ready to be used. I suggest to not edit any variable names, as there are a lot of dependencies within the buttons. 
-
 **Known bugs** (as in Imgur API bugs that I cannot fix)  
 Can choose album to upload to only for images. It does not work for videos.
+
+**IMPORTANT**: Please follow the instructions in the premade buttons that are provided after you install the extensions. I suggest to not edit any variable names, as there are a lot of dependencies within the buttons.    
 
 *Note: The OBS screenshot to Imgur feature makes a brief connection to your OBS websocket to retrieve the image data. If you changed your websocket port, you will need to change it in the .lbe file as well. Just edit this line:  address: 'localhost:4444'* 
