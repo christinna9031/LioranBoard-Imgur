@@ -4,7 +4,7 @@
 **Main feature**  
 Take an OBS screenshot of any source/scene and instantly upload it to Imgur. Can use the Discord webhook extension to send screenshots to your Discord server as well. 
 
-**Other features:**  
+**Other features**  
 Create albums  
 Upload media (pictures and videos) directly from your Transmitter to Imgur (the Imgur link will get saved in a variable in your Receiver, so you can easily post it in your Twitch chat)  
 Retrieve media from a specified album  
