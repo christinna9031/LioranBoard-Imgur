@@ -1,5 +1,5 @@
 # LioranBoard Imgur
- **An extension to connect LioranBoard to Imgur. Updates OBS screenshots to Imgur as well.**
+ **An extension to connect LioranBoard to Imgur. Can upload OBS screenshots to Imgur as well.**
 
 **Main feature:** Take an OBS screenshot of any source/scene and instantly upload it to Imgur. Can use the Discord webhook extension to send screenshots to your Discord server as well. 
 
