@@ -47,7 +47,6 @@ obs.connect({ address: 'localhost:4444', password: pw });
       .then(data => {
         //console.log(data)
         if (data.status == "ok") {
-          console.log(data);
           img64 = data.img.split("base64,")
           LBImgur("LBScreenshot", variable, title, desc, album, img64[1])
         } else {
@@ -196,12 +195,12 @@ function LBImgur(type, variable, var1, var2, var3, file) {
     const uploadimg = fetch(url, params);
 
     uploadimg.then(response => {
-        console.log(response)
+        //console.log(response)
         return ((response.json()))
       })
 
       .then(data => {
-        console.log(data)
+        //console.log(data)
         if (data.status == 200) {
           if (type == "LBScreenshot") {
             LBSet(variable, data.data.id)
@@ -238,7 +237,7 @@ function LBImgur(type, variable, var1, var2, var3, file) {
           }
         } else {
           LBAlert("Imgur Error: " + data.data.error)
-          console.log(data.data.error)
+          //console.log(data.data.error)
         }
       }, err => {
         LBAlert("Imgur: Something went wrong.")
