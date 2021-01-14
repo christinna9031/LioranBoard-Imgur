@@ -2,7 +2,7 @@
 Imgur
 [insert_external]
 <!--
- * @name: Screenshot to Imgur, @version: 1.0, @author: Christinna#9031
+ * @name: Screenshot to Imgur, @version: 1.1, @author: Christinna#9031
  * -->
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/obs-websocket-js@4.0.2/dist/obs-websocket.js"></script>
 <div><p>Screenshot to Imgur extension is installed. </p></div>
