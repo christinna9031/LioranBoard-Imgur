@@ -32,20 +32,20 @@ LBImgur (LioranBoardJSON.type,LioranBoardJSON.variable, LioranBoardJSON.value1, 
 }break
 [insert_script]
 function LBScreenshottoImgur(variable, pw, source, filepath, title, desc, album) {
+  
   const obs = new OBSWebSocket();
+obs.connect({ address: 'localhost:4444', password: pw });
 
-  obs.connect({
-    address: 'localhost:4444',
-    password: pw
-  });
+  obs.on('ConnectionOpened', () => {})
 
-  obs.on('ConnectionOpened', () => {
+  obs.on('AuthenticationSuccess', () => {
     obs.send('TakeSourceScreenshot', {
         "sourceName": source,
         "embedPictureFormat": "png",
         "saveToFilePath": filepath
       })
       .then(data => {
+        //console.log(data)
         if (data.status == "ok") {
           console.log(data);
           img64 = data.img.split("base64,")
@@ -55,6 +55,7 @@ function LBScreenshottoImgur(variable, pw, source, filepath, title, desc, album)
         }
         obs.disconnect()
       }, error => {
+        //console.log(error)
         LBError(error.error)
         obs.disconnect()
       })
