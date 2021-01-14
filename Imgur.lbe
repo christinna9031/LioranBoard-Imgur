@@ -1,0 +1,978 @@
+[extension_name]
+Imgur
+[insert_external]
+<!--
+ * @name: Screenshot to Imgur, @version: 1.0, @author: Christinna#9031
+ * -->
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/obs-websocket-js@4.0.2/dist/obs-websocket.js"></script>
+<div><p>Screenshot to Imgur extension is installed. </p></div>
+<div><p><b>Imgur uploader</b> </p></div>
+<p>Upload image (up to 10MB) or video (up to 200MB)</p>
+<div id=ImgurInput></div>
+<table>
+
+	<form id="imgursubmitfile">
+	<tr><td>Album Hash (images): </td><td><input type="text" id="ImgurAlbum"></td> </tr>
+	<tr><td>Title: </td><td><input type="text" id="ImgurTitle"> </td> </tr>
+	<tr><td>Description:<td><input type="text" id="ImgurDesc"></td><td><input type="checkbox" id="ImgurAudio"> Remove Audio</td></tr>
+	<tr><td colspan="2"> <input id="ImgurFile" accept="image/*,video/*" type="file" required width=10px> </td> </tr>
+	
+	<tr><td><button type="submit" onclick="LBImgur('uploadimg')">Upload</button></td></tr></form>
+
+</table>
+[insert_command]
+lioranboardclient.send('{"type":"MESSAGE","topic":"ExtensionCommand","name":"Screenshot to Imgur","boxcount":7,"boxname1":"variable","boxtype1":"string","boxname2":"obsws_pass","boxtype2":"string","boxname3":"source_name","boxtype3":"string","boxname4":"filepath","boxtype4":"string","boxname5":"title","boxtype5":"string","boxname6":"description","boxtype6":"string","boxname7":"album","boxtype7":"string"}');  
+lioranboardclient.send('{"type":"MESSAGE","topic":"ExtensionCommand","name":"Imgur","boxcount":5,"boxname1":"type|search_tags|delete_img|create_album|delete_album|get_album_imgs|","boxtype1":"string","boxname2":"variable","boxtype2":"string","boxname3":"value1","boxtype3":"string","boxname4":"value2","boxtype4":"string","boxname5":"value3","boxtype5":"string"}');  
+[insert_hook]
+case "ScreenshottoImgur":{  
+LBScreenshottoImgur (LioranBoardJSON.variable, LioranBoardJSON.obsws_pass, LioranBoardJSON.source_name, LioranBoardJSON.filepath, LioranBoardJSON.title,LioranBoardJSON.description,LioranBoardJSON.album)
+}break
+case "Imgur":{  
+LBImgur (LioranBoardJSON.type,LioranBoardJSON.variable, LioranBoardJSON.value1, LioranBoardJSON.value2, LioranBoardJSON.value3)
+}break
+[insert_script]
+function LBScreenshottoImgur(variable, pw, source, filepath, title, desc, album) {
+  const obs = new OBSWebSocket();
+
+  obs.connect({
+    address: 'localhost:4444',
+    password: pw
+  });
+
+  obs.on('ConnectionOpened', () => {
+    obs.send('TakeSourceScreenshot', {
+        "sourceName": source,
+        "embedPictureFormat": "png",
+        "saveToFilePath": filepath
+      })
+      .then(data => {
+        if (data.status == "ok") {
+          console.log(data);
+          img64 = data.img.split("base64,")
+          LBImgur("LBScreenshot", variable, title, desc, album, img64[1])
+        } else {
+          LBError(data.status)
+        }
+        obs.disconnect()
+      }, error => {
+        LBError(error.error)
+        obs.disconnect()
+      })
+  })
+
+  function LBError(msg) {
+    lioranboardclient.send('{"type":"MESSAGE","topic":"AlertMessage","message":"Screenshot extension error: ' + msg + '"}')
+  }
+}
+
+function LBImgur(type, variable, var1, var2, var3, file) {
+
+  const clientid = "2885e53a70f49c8"
+  const myHeaders = new Headers();
+  const formdata = new FormData();
+  const form = document.querySelector('#imgursubmitfile');
+  var url, method
+  let params = {
+    redirect: "follow"
+  }
+  let matched = true
+  let output = document.querySelector("#ImgurInput")
+
+  myHeaders.append("Authorization", "Client-ID " + clientid);
+  form.addEventListener('submit', TslImgUpload)
+
+  function TslImgUpload() {
+    event.preventDefault();
+
+    const fileInput = document.querySelector('#ImgurFile')
+    const imageFile = fileInput.files[0];
+    const album = document.querySelector('#ImgurAlbum').value
+    const title = document.querySelector('#ImgurTitle').value
+    const description = document.querySelector('#ImgurDesc').value
+    let removeaudio = 0
+    url = "https://api.imgur.com/3/image"
+    method = "POST"
+
+    if (document.querySelector("#ImgurAudio").checked) {
+      removeaudio = 1
+    }
+    if (album.length > 3) {
+      formdata.append('album', album)
+    }
+
+    formdata.append('title', title)
+    formdata.append('description', description)
+    formdata.append('type', 'file')
+
+    if (isFileImage(imageFile)) {
+      if (imageFile.size < 10485761) { //image files
+        formdata.append('image', imageFile);
+      } else {
+        output.innerHTML = "<p>Error: Maximum file size exceeded.</p>"
+      }
+    } else if (isFileVideo(imageFile)) { //video files
+      if (imageFile.size < 209715200) {
+        url = "https://cors-anywhere.herokuapp.com/https://api.imgur.com/3/upload"
+        formdata.append('disable_audio', removeaudio)
+        formdata.append('video', imageFile);
+      } else {
+        output.innerHTML = "<p>Error: Maximum file size exceeded.</p>"
+      }
+    }
+
+    params.method = method
+    params.headers = myHeaders
+    params.body = formdata
+    FetchImgur();
+    form.removeEventListener('submit', TslImgUpload)
+  }
+
+  function isFileImage(file) {
+    return file && file['type'].split('/')[0] === 'image';
+  }
+
+  function isFileVideo(file) {
+    return file && file['type'].split('/')[0] === 'video';
+  }
+
+
+  switch (type) {
+    case "LBScreenshot":
+      url = "https://api.imgur.com/3/image"
+      method = "POST"
+      formdata.append("title", var1, );
+      formdata.append("description", var2, );
+      formdata.append("image", file);
+      if (var3.length > 3) {
+        formdata.append("album", var3)
+      }
+      params.body = formdata
+      break;
+    case "search_tags":
+      url = "https://api.imgur.com/3/gallery/t/" + var1
+      method = "GET"
+      break;
+    case "delete_img":
+      url = "https://api.imgur.com/3/image/" + var1
+      method = "DELETE"
+      break;
+    case "create_album":
+      url = "https://api.imgur.com/3/album"
+      method = "POST"
+      formdata.append("title", var1, );
+      formdata.append("description", var2, );
+      formdata.append("privacy", var3, );
+      params.body = formdata
+      break;
+    case "delete_album":
+      method = "DELETE"
+      url = "https://api.imgur.com/3/album/" + var1
+      break;
+    case "get_album_imgs":
+      method = "GET"
+      url = "https://api.imgur.com/3/album/" + var1 + "/images"
+      break;
+    default:
+      matched = false
+  }
+
+  if (matched) {
+    params.method = method
+    params.headers = myHeaders
+    FetchImgur()
+  }
+
+  function LBSet(variable, value) {
+    lioranboardclient.send('{"type":"MESSAGE","topic":"SetValue","valuename":"' + variable + '","value":"' + value + '","real":false}')
+  }
+
+  function LBAlert(msg) {
+    lioranboardclient.send('{"type":"MESSAGE","topic":"AlertMessage","message":"' + msg + '"}')
+  }
+
+
+  function FetchImgur() {
+    const uploadimg = fetch(url, params);
+
+    uploadimg.then(response => {
+        console.log(response)
+        return ((response.json()))
+      })
+
+      .then(data => {
+        console.log(data)
+        if (data.status == 200) {
+          if (type == "LBScreenshot") {
+            LBSet(variable, data.data.id)
+            LBSet(variable + '_url', data.data.link)
+            LBSet(variable + '_delete', data.data.deletehash)
+          } else if (type == "search_tags") {
+            let count = 0
+            lioranboardclient.send('{"type":"MESSAGE","topic":"DeleteStack","name":"' + variable + '"}')
+            for (var i = 0;
+              (i < data.data.items.length) && (count < 60); i++) {
+              for (var k = 0;
+                (k < data.data.items[i].images.length) && (count < 60); k++) {
+                count++
+                let img = data.data.items[i].images[k].link
+                lioranboardclient.send('{"type":"MESSAGE","topic":"AddStack","name":"' + variable + '","position":"top","value":"' + img + '"}')
+              }
+            }
+          } else if (type == "uploadimg") {
+            lioranboardclient.send('{"type":"MESSAGE","topic":"ExtensionTrigger","trigger":"Imgur Upload","value1":"' + data.data.id + '", "value2":"' + data.data.deletehash + '"}')
+            output.innerHTML = "<p><a href=" + data.data.link + " target='_blank'>" + data.data.link + "</a> <br> Media Delete Hash: <i>" + data.data.deletehash + "</i> <br></p>"
+          } else if (type == "get_album_imgs") {
+            lioranboardclient.send('{"type":"MESSAGE","topic":"DeleteStack","name":"' + variable + '"}')
+            for (var i = 0; i < data.data.length; i++) {
+              let img = data.data[i].link
+              lioranboardclient.send('{"type":"MESSAGE","topic":"AddStack","name":"' + variable + '","position":"top","value":"' + img + '"}')
+            }
+          } else if (type == "create_album") {
+            LBAlert("Imgur: Success!")
+            LBSet(variable, data.data.id)
+            LBSet(variable + '_delete', data.data.deletehash)
+          } else {
+            LBAlert("Imgur: Success!")
+            LBSet("delete_success", "true")
+          }
+        } else {
+          LBAlert("Imgur Error: " + data.data.error)
+          console.log(data.data.error)
+        }
+      }, err => {
+        LBAlert("Imgur: Something went wrong.")
+      })
+  }
+}
+[insert_over]
+[buttons_1x2]
+activepress="0.000000"
+border_size="0.000000"
+combine="0.000000"
+type="websocketaction+pubsubaction+"
+picture=""
+text="Imgur # External Upload"
+color="12632256.000000"
+button_id="3392.000000"
+extensiontrigger0="Imgur Upload"
+pubsubaction0="7.000000"
+pubsubqueue="0.000000"
+websocketdelay6="0.000000"
+websocketvalue8_6=""
+websocketvalue7_6=""
+websocketvalue6_6=""
+websocketvalue5_6=""
+websocketvalue4_6=""
+websocketvalue3_6=""
+websocketvalue2_6=""
+websocketvalue1_6="Uploaded media url is https://i.imgur.com//$media_id$/"
+websocketaction6="36.000000"
+websocketdelay5="0.000000"
+websocketvalue8_5=""
+websocketvalue7_5=""
+websocketvalue6_5=""
+websocketvalue5_5=""
+websocketvalue4_5=""
+websocketvalue3_5=""
+websocketvalue2_5=""
+websocketvalue1_5="Example of sending a link of your uploaded media to Twitch chat. "
+websocketaction5="92.000000"
+websocketdelay4="0.000000"
+websocketvalue8_4=""
+websocketvalue7_4=""
+websocketvalue6_4=""
+websocketvalue5_4=""
+websocketvalue4_4="media_deletehash"
+websocketvalue3_4="/$media_id$/"
+websocketvalue2_4="Uploads"
+websocketvalue1_4="imgur.ini"
+websocketaction4="39.000000"
+websocketdelay3="0.000000"
+websocketvalue8_3=""
+websocketvalue7_3=""
+websocketvalue6_3=""
+websocketvalue5_3=""
+websocketvalue4_3=""
+websocketvalue3_3=""
+websocketvalue2_3=""
+websocketvalue1_3="Saves the image deletehash into .ini file (to delete it if needed). Do NOT modify if inexperienced."
+websocketaction3="92.000000"
+websocketdelay2="0.000000"
+websocketvalue8_2=""
+websocketvalue7_2=""
+websocketvalue6_2=""
+websocketvalue5_2=""
+websocketvalue4_2=""
+websocketvalue3_2="false"
+websocketvalue2_2="2"
+websocketvalue1_2="media_deletehash"
+websocketaction2="35.000000"
+websocketdelay1="0.000000"
+websocketvalue8_1=""
+websocketvalue7_1=""
+websocketvalue6_1=""
+websocketvalue5_1=""
+websocketvalue4_1=""
+websocketvalue3_1="false"
+websocketvalue2_1="1"
+websocketvalue1_1="media_id"
+websocketaction1="35.000000"
+websocketdelay0="0.000000"
+websocketvalue8_0=""
+websocketvalue7_0=""
+websocketvalue6_0=""
+websocketvalue5_0=""
+websocketvalue4_0=""
+websocketvalue3_0=""
+websocketvalue2_0=""
+websocketvalue1_0="If you upload any media to Imgur directly from your Transmitter, it will trigger this button. "
+websocketaction0="92.000000"
+[buttons_2x1]
+activepress="0.000000"
+border_size="0.000000"
+combine="0.000000"
+type="websocketaction+"
+picture=""
+text="delete image"
+color="12632256.000000"
+button_id="3415.000000"
+websocketdelay11="5000.000000"
+websocketvalue8_11=""
+websocketvalue7_11=""
+websocketvalue6_11=""
+websocketvalue5_11=""
+websocketvalue4_11=""
+websocketvalue3_11=""
+websocketvalue2_11=""
+websocketvalue1_11="delete_success"
+websocketaction11="60.000000"
+websocketdelay10="3000.000000"
+websocketvalue8_10=""
+websocketvalue7_10=""
+websocketvalue6_10=""
+websocketvalue5_10=""
+websocketvalue4_10="img_deletehash"
+websocketvalue3_10="/$image_delete$/"
+websocketvalue2_10="Uploads"
+websocketvalue1_10="imgur.ini"
+websocketaction10="39.000000"
+websocketdelay9="3000.000000"
+websocketvalue8_9=""
+websocketvalue7_9=""
+websocketvalue6_9=""
+websocketvalue5_9=""
+websocketvalue4_9=""
+websocketvalue3_9="_deleted"
+websocketvalue2_9="11"
+websocketvalue1_9="img_deletehash"
+websocketaction9="22.000000"
+websocketdelay8="3000.000000"
+websocketvalue8_8=""
+websocketvalue7_8=""
+websocketvalue6_8=""
+websocketvalue5_8=""
+websocketvalue4_8="2"
+websocketvalue3_8="true"
+websocketvalue2_8="7"
+websocketvalue1_8="delete_success"
+websocketaction8="23.000000"
+websocketdelay7="0.000000"
+websocketvalue8_7=""
+websocketvalue7_7=""
+websocketvalue6_7=""
+websocketvalue5_7=""
+websocketvalue4_7=""
+websocketvalue3_7=""
+websocketvalue2_7=""
+websocketvalue1_7="If the deletion is successful, it will modify the value in your imgur.ini file: "
+websocketaction7="92.000000"
+websocketdelay6="50.000000"
+websocketvalue8_6=""
+websocketvalue7_6=""
+websocketvalue6_6=""
+websocketvalue5_6=""
+websocketvalue4_6="/$img_deletehash$/"
+websocketvalue3_6=""
+websocketvalue2_6="delete_img"
+websocketvalue1_6="Imgur"
+websocketaction6="71.000000"
+websocketdelay5="0.000000"
+websocketvalue8_5=""
+websocketvalue7_5=""
+websocketvalue6_5=""
+websocketvalue5_5=""
+websocketvalue4_5=""
+websocketvalue3_5=""
+websocketvalue2_5=""
+websocketvalue1_5="value1 = deletehash of the image/video (auto retrieved from your .ini file)"
+websocketaction5="92.000000"
+websocketdelay4="0.000000"
+websocketvalue8_4=""
+websocketvalue7_4=""
+websocketvalue6_4=""
+websocketvalue5_4=""
+websocketvalue4_4="img_deletehash"
+websocketvalue3_4="/$image_delete$/"
+websocketvalue2_4="Uploads"
+websocketvalue1_4="imgur.ini"
+websocketaction4="40.000000"
+websocketdelay3="0.000000"
+websocketvalue8_3=""
+websocketvalue7_3=""
+websocketvalue6_3=""
+websocketvalue5_3=""
+websocketvalue4_3=""
+websocketvalue3_3=""
+websocketvalue2_3=""
+websocketvalue1_3="Do NOT modify anything else below if inexperienced."
+websocketaction3="92.000000"
+websocketdelay2="0.000000"
+websocketvalue8_2=""
+websocketvalue7_2=""
+websocketvalue6_2=""
+websocketvalue5_2=""
+websocketvalue4_2=""
+websocketvalue3_2="sb03lgP"
+websocketvalue2_2="10"
+websocketvalue1_2="image_delete"
+websocketaction2="22.000000"
+websocketdelay1="0.000000"
+websocketvalue8_1=""
+websocketvalue7_1=""
+websocketvalue6_1=""
+websocketvalue5_1=""
+websocketvalue4_1=""
+websocketvalue3_1=""
+websocketvalue2_1=""
+websocketvalue1_1="Fill in your image ID you want to delete below : "
+websocketaction1="92.000000"
+websocketdelay0="0.000000"
+websocketvalue8_0=""
+websocketvalue7_0=""
+websocketvalue6_0=""
+websocketvalue5_0=""
+websocketvalue4_0=""
+websocketvalue3_0=""
+websocketvalue2_0=""
+websocketvalue1_0="Deletes an image you previously uploaded via LB or Transmitter. "
+websocketaction0="92.000000"
+[buttons_1x1]
+activepress="0.000000"
+border_size="0.000000"
+combine="0.000000"
+type="websocketaction+"
+picture=""
+text="delete album"
+color="12632256.000000"
+button_id="3420.000000"
+websocketdelay11="5000.000000"
+websocketvalue8_11=""
+websocketvalue7_11=""
+websocketvalue6_11=""
+websocketvalue5_11=""
+websocketvalue4_11=""
+websocketvalue3_11=""
+websocketvalue2_11=""
+websocketvalue1_11="delete_success"
+websocketaction11="60.000000"
+websocketdelay10="3000.000000"
+websocketvalue8_10=""
+websocketvalue7_10=""
+websocketvalue6_10=""
+websocketvalue5_10=""
+websocketvalue4_10="alb_deletehash"
+websocketvalue3_10="/$album_delete$/"
+websocketvalue2_10="Albums"
+websocketvalue1_10="imgur.ini"
+websocketaction10="39.000000"
+websocketdelay9="3000.000000"
+websocketvalue8_9=""
+websocketvalue7_9=""
+websocketvalue6_9=""
+websocketvalue5_9=""
+websocketvalue4_9=""
+websocketvalue3_9="_deleted"
+websocketvalue2_9="11"
+websocketvalue1_9="alb_deletehash"
+websocketaction9="22.000000"
+websocketdelay8="3000.000000"
+websocketvalue8_8=""
+websocketvalue7_8=""
+websocketvalue6_8=""
+websocketvalue5_8=""
+websocketvalue4_8="2"
+websocketvalue3_8="true"
+websocketvalue2_8="7"
+websocketvalue1_8="delete_success"
+websocketaction8="23.000000"
+websocketdelay7="0.000000"
+websocketvalue8_7=""
+websocketvalue7_7=""
+websocketvalue6_7=""
+websocketvalue5_7=""
+websocketvalue4_7=""
+websocketvalue3_7=""
+websocketvalue2_7=""
+websocketvalue1_7="If the deletion is successful, it will modify the value in your imgur.ini file: "
+websocketaction7="92.000000"
+websocketdelay6="50.000000"
+websocketvalue8_6=""
+websocketvalue7_6=""
+websocketvalue6_6=""
+websocketvalue5_6=""
+websocketvalue4_6="/$alb_deletehash$/"
+websocketvalue3_6=""
+websocketvalue2_6="delete_album"
+websocketvalue1_6="Imgur"
+websocketaction6="71.000000"
+websocketdelay5="0.000000"
+websocketvalue8_5=""
+websocketvalue7_5=""
+websocketvalue6_5=""
+websocketvalue5_5=""
+websocketvalue4_5=""
+websocketvalue3_5=""
+websocketvalue2_5=""
+websocketvalue1_5="value1 = deletehash of the album (auto retrieved from your .ini file)"
+websocketaction5="92.000000"
+websocketdelay4="0.000000"
+websocketvalue8_4=""
+websocketvalue7_4=""
+websocketvalue6_4=""
+websocketvalue5_4=""
+websocketvalue4_4="alb_deletehash"
+websocketvalue3_4="/$album_delete$/"
+websocketvalue2_4="Albums"
+websocketvalue1_4="imgur.ini"
+websocketaction4="40.000000"
+websocketdelay3="0.000000"
+websocketvalue8_3=""
+websocketvalue7_3=""
+websocketvalue6_3=""
+websocketvalue5_3=""
+websocketvalue4_3=""
+websocketvalue3_3=""
+websocketvalue2_3=""
+websocketvalue1_3="Do NOT modify anything else below if inexperienced."
+websocketaction3="92.000000"
+websocketdelay2="0.000000"
+websocketvalue8_2=""
+websocketvalue7_2=""
+websocketvalue6_2=""
+websocketvalue5_2=""
+websocketvalue4_2=""
+websocketvalue3_2="f6tADxE"
+websocketvalue2_2="10"
+websocketvalue1_2="album_delete"
+websocketaction2="22.000000"
+websocketdelay1="0.000000"
+websocketvalue8_1=""
+websocketvalue7_1=""
+websocketvalue6_1=""
+websocketvalue5_1=""
+websocketvalue4_1=""
+websocketvalue3_1=""
+websocketvalue2_1=""
+websocketvalue1_1="fill in your album ID you want to delete below: "
+websocketaction1="92.000000"
+websocketdelay0="0.000000"
+websocketvalue8_0=""
+websocketvalue7_0=""
+websocketvalue6_0=""
+websocketvalue5_0=""
+websocketvalue4_0=""
+websocketvalue3_0=""
+websocketvalue2_0=""
+websocketvalue1_0="Deletes an album you previously created in LB. "
+websocketaction0="92.000000"
+[buttons_0x1]
+activepress="0.000000"
+border_size="0.000000"
+combine="0.000000"
+type="websocketaction+"
+picture=""
+text="Retrieve album # images"
+color="12632256.000000"
+button_id="3411.000000"
+websocketdelay6="4000.000000"
+websocketvalue8_6=""
+websocketvalue7_6=""
+websocketvalue6_6=""
+websocketvalue5_6=""
+websocketvalue4_6=""
+websocketvalue3_6=""
+websocketvalue2_6="{þurlþ:þ/$random_image$/þ}"
+websocketvalue1_6="browser"
+websocketaction6="62.000000"
+websocketdelay5="4000.000000"
+websocketvalue8_5=""
+websocketvalue7_5=""
+websocketvalue6_5=""
+websocketvalue5_5=""
+websocketvalue4_5=""
+websocketvalue3_5=""
+websocketvalue2_5="random_image"
+websocketvalue1_5="imgur_img"
+websocketaction5="78.000000"
+websocketdelay4="0.000000"
+websocketvalue8_4=""
+websocketvalue7_4=""
+websocketvalue6_4=""
+websocketvalue5_4=""
+websocketvalue4_4=""
+websocketvalue3_4=""
+websocketvalue2_4=""
+websocketvalue1_4="example of displaying a random Imgur album image in OBS (needs a browser source)"
+websocketaction4="92.000000"
+websocketdelay3="0.000000"
+websocketvalue8_3=""
+websocketvalue7_3=""
+websocketvalue6_3=""
+websocketvalue5_3=""
+websocketvalue4_3="Jfni3"
+websocketvalue3_3="imgur_img"
+websocketvalue2_3="get_album_imgs"
+websocketvalue1_3="Imgur"
+websocketaction3="71.000000"
+websocketdelay2="0.000000"
+websocketvalue8_2=""
+websocketvalue7_2=""
+websocketvalue6_2=""
+websocketvalue5_2=""
+websocketvalue4_2=""
+websocketvalue3_2=""
+websocketvalue2_2=""
+websocketvalue1_2="value1 = album ID. For example, the album ID for https://imgur.com/a/Jfni3  is Jfni3 "
+websocketaction2="92.000000"
+websocketdelay1="0.000000"
+websocketvalue8_1=""
+websocketvalue7_1=""
+websocketvalue6_1=""
+websocketvalue5_1=""
+websocketvalue4_1=""
+websocketvalue3_1=""
+websocketvalue2_1=""
+websocketvalue1_1="variable = stack name to save the image IDs under"
+websocketaction1="92.000000"
+websocketdelay0="0.000000"
+websocketvalue8_0=""
+websocketvalue7_0=""
+websocketvalue6_0=""
+websocketvalue5_0=""
+websocketvalue4_0=""
+websocketvalue3_0=""
+websocketvalue2_0=""
+websocketvalue1_0="Retrieves specified's album image IDs and places them in a stack. "
+websocketaction0="92.000000"
+[buttons_2x0]
+activepress="0.000000"
+border_size="0.000000"
+combine="0.000000"
+type="websocketaction+"
+picture=""
+text="Search media # by tags"
+color="12632256.000000"
+button_id="3403.000000"
+websocketdelay6="4000.000000"
+websocketvalue8_6=""
+websocketvalue7_6=""
+websocketvalue6_6=""
+websocketvalue5_6=""
+websocketvalue4_6=""
+websocketvalue3_6=""
+websocketvalue2_6="{þurlþ:þ/$random_image$/þ}"
+websocketvalue1_6="browser"
+websocketaction6="62.000000"
+websocketdelay5="4000.000000"
+websocketvalue8_5=""
+websocketvalue7_5=""
+websocketvalue6_5=""
+websocketvalue5_5=""
+websocketvalue4_5=""
+websocketvalue3_5=""
+websocketvalue2_5="random_image"
+websocketvalue1_5="imgur_tag"
+websocketaction5="78.000000"
+websocketdelay4="0.000000"
+websocketvalue8_4=""
+websocketvalue7_4=""
+websocketvalue6_4=""
+websocketvalue5_4=""
+websocketvalue4_4=""
+websocketvalue3_4=""
+websocketvalue2_4=""
+websocketvalue1_4="example of displaying a random Imgur image by selected tag in OBS (needs a browser source)"
+websocketaction4="92.000000"
+websocketdelay3="0.000000"
+websocketvalue8_3=""
+websocketvalue7_3=""
+websocketvalue6_3=""
+websocketvalue5_3=""
+websocketvalue4_3="rabbit"
+websocketvalue3_3="imgur_tag"
+websocketvalue2_3="search_tags"
+websocketvalue1_3="Imgur"
+websocketaction3="71.000000"
+websocketdelay2="0.000000"
+websocketvalue8_2=""
+websocketvalue7_2=""
+websocketvalue6_2=""
+websocketvalue5_2=""
+websocketvalue4_2=""
+websocketvalue3_2=""
+websocketvalue2_2=""
+websocketvalue1_2="value1 = tag/keyword for the images"
+websocketaction2="92.000000"
+websocketdelay1="0.000000"
+websocketvalue8_1=""
+websocketvalue7_1=""
+websocketvalue6_1=""
+websocketvalue5_1=""
+websocketvalue4_1=""
+websocketvalue3_1=""
+websocketvalue2_1=""
+websocketvalue1_1="variable = stack name to save the images under"
+websocketaction1="92.000000"
+websocketdelay0="0.000000"
+websocketvalue8_0=""
+websocketvalue7_0=""
+websocketvalue6_0=""
+websocketvalue5_0=""
+websocketvalue4_0=""
+websocketvalue3_0=""
+websocketvalue2_0=""
+websocketvalue1_0="Searches Imgur for media matching the specified keyword/tag and saves 50 trending ones in a stack."
+websocketaction0="92.000000"
+[buttons_1x0]
+activepress="0.000000"
+border_size="0.000000"
+combine="0.000000"
+type="websocketaction+"
+picture=""
+text="create album"
+color="12632256.000000"
+button_id="3399.000000"
+websocketdelay6="4000.000000"
+websocketvalue8_6=""
+websocketvalue7_6=""
+websocketvalue6_6=""
+websocketvalue5_6=""
+websocketvalue4_6="imguralbum_delete"
+websocketvalue3_6="/$imguralbum$/"
+websocketvalue2_6="Albums"
+websocketvalue1_6="imgur.ini"
+websocketaction6="39.000000"
+websocketdelay5="0.000000"
+websocketvalue8_5=""
+websocketvalue7_5=""
+websocketvalue6_5=""
+websocketvalue5_5=""
+websocketvalue4_5=""
+websocketvalue3_5=""
+websocketvalue2_5=""
+websocketvalue1_5="Saves the album deletehash into .ini file (to delete it if needed). Do NOT modify if inexperienced."
+websocketaction5="92.000000"
+websocketdelay4="0.000000"
+websocketvalue8_4=""
+websocketvalue7_4=""
+websocketvalue6_4="public"
+websocketvalue5_4="This is the first Imgur album created with LioranBoard."
+websocketvalue4_4="My first Imgur Album"
+websocketvalue3_4="imguralbum"
+websocketvalue2_4="create_album"
+websocketvalue1_4="Imgur"
+websocketaction4="71.000000"
+websocketdelay3="0.000000"
+websocketvalue8_3=""
+websocketvalue7_3=""
+websocketvalue6_3=""
+websocketvalue5_3=""
+websocketvalue4_3=""
+websocketvalue3_3=""
+websocketvalue2_3=""
+websocketvalue1_3="<variable>_delete = your album deletehash"
+websocketaction3="92.000000"
+websocketdelay2="0.000000"
+websocketvalue8_2=""
+websocketvalue7_2=""
+websocketvalue6_2=""
+websocketvalue5_2=""
+websocketvalue4_2=""
+websocketvalue3_2=""
+websocketvalue2_2=""
+websocketvalue1_2="variable = variable name to save the album ID, Do NOT modify if inexperienced."
+websocketaction2="92.000000"
+websocketdelay1="0.000000"
+websocketvalue8_1=""
+websocketvalue7_1=""
+websocketvalue6_1=""
+websocketvalue5_1=""
+websocketvalue4_1=""
+websocketvalue3_1=""
+websocketvalue2_1=""
+websocketvalue1_1="value3 (optional) = album privacy. Possible values: public, hidden or secret. "
+websocketaction1="92.000000"
+websocketdelay0="0.000000"
+websocketvalue8_0=""
+websocketvalue7_0=""
+websocketvalue6_0=""
+websocketvalue5_0=""
+websocketvalue4_0=""
+websocketvalue3_0=""
+websocketvalue2_0=""
+websocketvalue1_0="Creates an anonymous Imgur album. value1 = album title, value2 = album description"
+websocketaction0="92.000000"
+[buttons_0x0]
+activepress="0.000000"
+border_size="0.000000"
+combine="0.000000"
+type="websocketaction+"
+picture=""
+text="OBS Screenshot # to Imgur"
+color="12632256.000000"
+button_id="3391.000000"
+websocketdelay13="4000.000000"
+websocketvalue8_13=""
+websocketvalue7_13=""
+websocketvalue6_13=""
+websocketvalue5_13=""
+websocketvalue4_13=""
+websocketvalue3_13=""
+websocketvalue2_13=""
+websocketvalue1_13="Here is your screenshot: https://i.imgur.com//$screenshot$/"
+websocketaction13="36.000000"
+websocketdelay12="0.000000"
+websocketvalue8_12=""
+websocketvalue7_12=""
+websocketvalue6_12=""
+websocketvalue5_12=""
+websocketvalue4_12=""
+websocketvalue3_12=""
+websocketvalue2_12=""
+websocketvalue1_12="example of posting the screenshot url in your Twitch chat"
+websocketaction12="92.000000"
+websocketdelay11="4000.000000"
+websocketvalue8_11=""
+websocketvalue7_11=""
+websocketvalue6_11=""
+websocketvalue5_11=""
+websocketvalue4_11=""
+websocketvalue3_11=""
+websocketvalue2_11="{þurlþ:þ/$screenshot_url$/þ}"
+websocketvalue1_11="browser"
+websocketaction11="62.000000"
+websocketdelay10="0.000000"
+websocketvalue8_10=""
+websocketvalue7_10=""
+websocketvalue6_10=""
+websocketvalue5_10=""
+websocketvalue4_10=""
+websocketvalue3_10=""
+websocketvalue2_10=""
+websocketvalue1_10="example of displaying the screenshot in your OBS in a browser source"
+websocketaction10="92.000000"
+websocketdelay9="4000.000000"
+websocketvalue8_9=""
+websocketvalue7_9=""
+websocketvalue6_9=""
+websocketvalue5_9=""
+websocketvalue4_9="screenshot_delete"
+websocketvalue3_9="/$screenshot$/"
+websocketvalue2_9="Uploads"
+websocketvalue1_9="imgur.ini"
+websocketaction9="39.000000"
+websocketdelay8="0.000000"
+websocketvalue8_8=""
+websocketvalue7_8=""
+websocketvalue6_8=""
+websocketvalue5_8=""
+websocketvalue4_8=""
+websocketvalue3_8=""
+websocketvalue2_8=""
+websocketvalue1_8="Saves the image deletehash into imgur.ini file (to delete it if needed). Do NOT modify if inexperienced."
+websocketaction8="92.000000"
+websocketdelay7="0.000000"
+websocketvalue8_7=""
+websocketvalue7_7="This is my first screenshot created with LB and uploaded to Imgur. "
+websocketvalue6_7="My first screenshot"
+websocketvalue5_7="E:/Stream/img.png"
+websocketvalue4_7="test"
+websocketvalue3_7=""
+websocketvalue2_7="screenshot"
+websocketvalue1_7="Screenshot to Imgur"
+websocketaction7="71.000000"
+websocketdelay6="0.000000"
+websocketvalue8_6=""
+websocketvalue7_6=""
+websocketvalue6_6=""
+websocketvalue5_6=""
+websocketvalue4_6=""
+websocketvalue3_6=""
+websocketvalue2_6=""
+websocketvalue1_6="<variable>_delete = image deletehash"
+websocketaction6="92.000000"
+websocketdelay5="0.000000"
+websocketvalue8_5=""
+websocketvalue7_5=""
+websocketvalue6_5=""
+websocketvalue5_5=""
+websocketvalue4_5=""
+websocketvalue3_5=""
+websocketvalue2_5=""
+websocketvalue1_5="<variable>_url =  full image URL. For example þhttps://i.imgur.com/2bvab7y.jpgþ. "
+websocketaction5="92.000000"
+websocketdelay4="0.000000"
+websocketvalue8_4=""
+websocketvalue7_4=""
+websocketvalue6_4=""
+websocketvalue5_4=""
+websocketvalue4_4=""
+websocketvalue3_4=""
+websocketvalue2_4=""
+websocketvalue1_4="variable = variable name to save the image ID. Do NOT modify if inexperienced."
+websocketaction4="92.000000"
+websocketdelay3="0.000000"
+websocketvalue8_3=""
+websocketvalue7_3=""
+websocketvalue6_3=""
+websocketvalue5_3=""
+websocketvalue4_3=""
+websocketvalue3_3=""
+websocketvalue2_3=""
+websocketvalue1_3="title = Imgur image title, description = Imgur image description "
+websocketaction3="92.000000"
+websocketdelay2="0.000000"
+websocketvalue8_2=""
+websocketvalue7_2=""
+websocketvalue6_2=""
+websocketvalue5_2=""
+websocketvalue4_2=""
+websocketvalue3_2=""
+websocketvalue2_2=""
+websocketvalue1_2="filepath = where to save the screenshot locally (needs the full path including the file name)"
+websocketaction2="92.000000"
+websocketdelay1="0.000000"
+websocketvalue8_1=""
+websocketvalue7_1=""
+websocketvalue6_1=""
+websocketvalue5_1=""
+websocketvalue4_1=""
+websocketvalue3_1=""
+websocketvalue2_1=""
+websocketvalue1_1="source_name = OBS source name (or scene name) to take the screenshot of"
+websocketaction1="92.000000"
+websocketdelay0="0.000000"
+websocketvalue8_0=""
+websocketvalue7_0=""
+websocketvalue6_0=""
+websocketvalue5_0=""
+websocketvalue4_0=""
+websocketvalue3_0=""
+websocketvalue2_0=""
+websocketvalue1_0="obsws_pass = your OBS websocket password (only if you set one up, leave empty otherwise)"
+websocketaction0="92.000000"
+[configs]
+name="Imgur"
+background_color="1285558.000000"
+grid_height="3.000000"
+grid_width="3.000000"
