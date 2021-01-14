@@ -12,8 +12,7 @@ Search by tag to retrieve trending Imgur media
 
 All uploaded media and albums are anonymous. You can save the deletehash into .ini file to be able to delete them later if needed. 
 
-**Known bugs**
-There is a potential bug in the library, as it doesn't properly connect to the OBS websocket if you set up a password. You can remove your password as a workaround for now. 
+**Known bugs**    
 Can choose album to upload to only for images. It does not work for videos.
 
 **IMPORTANT**: Please follow the instructions in the premade buttons that are provided after you install the extensions. I suggest to not edit any variable names, as there are a lot of dependencies within the buttons.    
