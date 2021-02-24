@@ -22,7 +22,7 @@ Imgur
 </table>
 [insert_command]
 lioranboardclient.send('{"type":"MESSAGE","topic":"ExtensionCommand","name":"Screenshot to Imgur","boxcount":7,"boxname1":"variable","boxtype1":"string","boxname2":"obsws_pass","boxtype2":"string","boxname3":"source_name","boxtype3":"string","boxname4":"filepath","boxtype4":"string","boxname5":"title","boxtype5":"string","boxname6":"description","boxtype6":"string","boxname7":"album","boxtype7":"string"}');  
-lioranboardclient.send('{"type":"MESSAGE","topic":"ExtensionCommand","name":"Imgur","boxcount":5,"boxname1":"type|search_tags|delete_img|create_album|delete_album|get_album_imgs|","boxtype1":"string","boxname2":"variable","boxtype2":"string","boxname3":"value1","boxtype3":"string","boxname4":"value2","boxtype4":"string","boxname5":"value3","boxtype5":"string"}');  
+lioranboardclient.send('{"type":"MESSAGE","topic":"ExtensionCommand","name":"Imgur","boxcount":5,"boxname1":"type|search_tags|delete_img|create_album|delete_album|get_album_imgs|upload_fromURL|","boxtype1":"string","boxname2":"variable","boxtype2":"string","boxname3":"value1","boxtype3":"string","boxname4":"value2","boxtype4":"string","boxname5":"value3","boxtype5":"string"}');   
 [insert_hook]
 case "ScreenshottoImgur":{  
 LBScreenshottoImgur (LioranBoardJSON.variable, LioranBoardJSON.obsws_pass, LioranBoardJSON.source_name, LioranBoardJSON.filepath, LioranBoardJSON.title,LioranBoardJSON.description,LioranBoardJSON.album)
@@ -137,6 +137,15 @@ function LBImgur(type, variable, var1, var2, var3, file) {
 
 
   switch (type) {
+    case "upload_fromURL": 
+    url = "https://api.imgur.com/3/image"
+      method = "POST"
+      formdata.append("title", var1, );
+      formdata.append("description", var2, );
+      formdata.append("image", var3);
+      formdata.append("type", 'URL');
+      params.body = formdata
+    break;
     case "LBScreenshot":
       url = "https://api.imgur.com/3/image"
       method = "POST"
@@ -230,8 +239,12 @@ function LBImgur(type, variable, var1, var2, var3, file) {
           } else if (type == "create_album") {
             LBAlert("Imgur: Success!")
             LBSet(variable, data.data.id)
-            LBSet(variable + '_delete', data.data.deletehash)
-          } else {
+            LBSet(variable + '_delete', data.data.deletehash)}
+            else if (type=="upload_fromURL") {
+              LBSet(variable, data.data.id)
+              LBSet(variable + '_delete', data.data.deletehash)
+            }
+           else {
             LBAlert("Imgur: Success!")
             LBSet("delete_success", "true")
           }
