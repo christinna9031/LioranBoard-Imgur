@@ -9,7 +9,7 @@ Create albums
 Upload media (pictures and videos) directly from your Transmitter to Imgur (the Imgur link will get saved in a variable in your Receiver, so you can easily post it in your Twitch chat)  
 Retrieve media from a specified album  
 Search by tag to retrieve trending Imgur media  
-Upload Picture from URL - value1: title, value2: description, value3: URL of the picture 
+Upload Image from URL
 
 All uploaded media and albums are anonymous. You can save the deletehash into .ini file to be able to delete them later if needed. 
 
